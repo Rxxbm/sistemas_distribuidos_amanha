@@ -6,6 +6,12 @@ from pyspark.sql.functions import col, udf
 from pyspark.sql.types import *
 import math
 
+#Importando para a previsão do dia da semana e horario de pico
+from pyspark.sql.functions import col, udf, date_format, hour, to_timestamp
+from pyspark.sql.types import *
+from pyspark.sql.functions import avg 
+#
+
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
 from pyspark.ml.regression import RandomForestRegressor
@@ -52,15 +58,20 @@ schema = StructType([
     StructField("Store_Longitude", DoubleType(), True),
     StructField("Drop_Latitude", DoubleType(), True),
     StructField("Drop_Longitude", DoubleType(), True),
-    StructField("Order_Date", StringType(), True), # Deixado como string, pois não será usado no modelo
-    StructField("Order_Time", StringType(), True),
+   # StructField("Order_Date", StringType(), True), # Deixado como string, pois não será usado no modelo
+    # StructField("Order_Time", StringType(), True),
     StructField("Pickup_Time", StringType(), True),
     StructField("Weather", StringType(), True),
     StructField("Traffic", StringType(), True),
     StructField("Vehicle", StringType(), True),
     StructField("Area", StringType(), True),
     StructField("Delivery_Time", IntegerType(), True), # Nosso ALVO (Label)
-    StructField("Category", StringType(), True)
+    StructField("Category", StringType(), True),
+
+
+    StructField("Order_Date", StringType(), True),
+    StructField("Order_Time", StringType(), True),
+
 ])
 
 DATA_PATH = '/home/rubem/Documentos/Rubem/Aplicacao_de_predicao/data/amazon_delivery.csv' 
@@ -69,6 +80,29 @@ MODEL_SAVE_PATH = './model/spark_delivery_pipeline'
 # Carrega o dataset
 df = (spark.read.csv(DATA_PATH, header=True, schema=schema)
       .na.drop()) # Remove linhas com nulos para simplificar
+
+# --- NOVO: ENGENHARIA DE FEATURES DE TEMPO ---
+# 1. Combina Data e Hora em um Timestamp
+# O formato dos seus dados Order_Date e Order_Time deve ser compatível
+df = df.withColumn(
+    "Order_Timestamp",
+    to_timestamp(col("Order_Date") + " " + col("Order_Time"), "yyyy-MM-dd HH:mm:ss") # Ajuste o formato se necessário
+)
+
+# 2. Extrai o Dia da Semana (Ex: Mon, Tue, Wed...)
+df = df.withColumn(
+    "Delivery_Day_of_Week", 
+    date_format(col("Order_Timestamp"), "EEE")
+)
+
+# 3. Extrai a Hora do Dia (0-23)
+df = df.withColumn(
+    "Delivery_Hour", 
+    hour(col("Order_Timestamp"))
+)
+
+print("Dados carregados e features de Distância, Dia da Semana e Hora criadas.")
+
 
 # Aplica a UDF Haversine
 df = df.withColumn(
@@ -81,11 +115,29 @@ df = df.withColumn(
 
 print("Dados carregados e feature 'Delivery_Distance' criada.")
 
+# --- NOVO: ANÁLISE PARA PICO E DIA (APENAS INFORMATIVO) ---
+
+# Média do Tempo de Entrega por Dia da Semana
+print("\n--- Análise: Média de Entrega por Dia ---")
+df.groupBy("Delivery_Day_of_Week").agg(
+    {"Delivery_Time": "avg"}
+).orderBy(col("avg(Delivery_Time)").desc()).show()
+
+# Média do Tempo de Entrega por Hora do Dia
+print("\n--- Análise: Média de Entrega por Hora ---")
+df.groupBy("Delivery_Hour").agg(
+    {"Delivery_Time": "avg"}
+).orderBy(col("avg(Delivery_Time)").desc()).show()
+
 # --- 4. Definição do Pipeline de ML ---
 
 # Identifica colunas categóricas e numéricas
-categorical_cols = ["Weather", "Traffic", "Vehicle", "Area", "Category"]
-numeric_cols = ["Agent_Age", "Agent_Rating", "Delivery_Distance"]
+#categorical_cols = ["Weather", "Traffic", "Vehicle", "Area", "Category"]
+#numeric_cols = ["Agent_Age", "Agent_Rating", "Delivery_Distance"]
+
+# ATUALIZAÇÃO: Incluir as novas features no pipeline
+categorical_cols = ["Weather", "Traffic", "Vehicle", "Area", "Category", "Delivery_Day_of_Week"]
+numeric_cols = ["Agent_Age", "Agent_Rating", "Delivery_Distance", "Delivery_Hour"]
 
 # Estágios do Pipeline
 stages = []
