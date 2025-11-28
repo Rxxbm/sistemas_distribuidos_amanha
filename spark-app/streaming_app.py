@@ -4,6 +4,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, udf
 from pyspark.sql.types import *
 from pyspark.ml import PipelineModel
+
+from pyspark.sql.functions import col, from_json, udf, date_format, hour, to_timestamp # NOVO IMPORT
 import math
 
 # --- 1. DEFINIÇÃO DA UDF (Deve ser idêntica à do script de treino) ---
@@ -51,8 +53,8 @@ schema = StructType([
     StructField("Store_Longitude", DoubleType(), True),
     StructField("Drop_Latitude", DoubleType(), True),
     StructField("Drop_Longitude", DoubleType(), True),
-    StructField("Order_Date", StringType(), True),
-    StructField("Order_Time", StringType(), True),
+    StructField("Order_Date", StringType(), True), #serão testados no calculo do tempo
+    StructField("Order_Time", StringType(), True), #
     StructField("Pickup_Time", StringType(), True),
     StructField("Weather", StringType(), True),
     StructField("Traffic", StringType(), True),
@@ -103,6 +105,19 @@ def process_batch(batch_df, batch_id):
         print(f"\n--- Processando Lote {batch_id} ---")
         
         # 1. Engenharia de Feature (idêntica ao treino)
+
+        # 1a. NOVO: Features de Tempo
+        features_df = batch_df.withColumn(
+            "Order_Timestamp",
+            to_timestamp(col("Order_Date") + " " + col("Order_Time"), "yyyy-MM-dd HH:mm:ss")
+        ).withColumn(
+            "Delivery_Day_of_Week", 
+            date_format(col("Order_Timestamp"), "EEE")
+        ).withColumn(
+            "Delivery_Hour", 
+            hour(col("Order_Timestamp"))
+        )
+
         # Calcula a distância de entrega para os novos dados
         features_df = batch_df.withColumn(
             "Delivery_Distance", 
@@ -111,6 +126,7 @@ def process_batch(batch_df, batch_id):
                 col("Drop_Latitude"), col("Drop_Longitude")
             )
         )
+
         
         # 2. Predição
         # Aplica o pipeline carregado (transformação + modelo)
@@ -121,7 +137,9 @@ def process_batch(batch_df, batch_id):
         output_df = predictions_df.select(
             col("Order_ID"),
             col("Delivery_Time").alias("Tempo_Real"),
-            col("prediction").alias("Tempo_Previsto_Min")
+            col("prediction").alias("Tempo_Previsto_Min"),
+            col("Delivery_Day_of_Week").alias("Dia"), # NOVO
+            col("Delivery_Hour").alias("Hora")       # NOVO
         )
         
         print("Predições realizadas:")
