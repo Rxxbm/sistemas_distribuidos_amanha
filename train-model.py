@@ -58,8 +58,8 @@ schema = StructType([
     StructField("Store_Longitude", DoubleType(), True),
     StructField("Drop_Latitude", DoubleType(), True),
     StructField("Drop_Longitude", DoubleType(), True),
-   # StructField("Order_Date", StringType(), True), # Deixado como string, pois não será usado no modelo
-    # StructField("Order_Time", StringType(), True),
+    StructField("Order_Date", StringType(), True),
+    StructField("Order_Time", StringType(), True),
     StructField("Pickup_Time", StringType(), True),
     StructField("Weather", StringType(), True),
     StructField("Traffic", StringType(), True),
@@ -69,8 +69,7 @@ schema = StructType([
     StructField("Category", StringType(), True),
 
 
-    StructField("Order_Date", StringType(), True),
-    StructField("Order_Time", StringType(), True),
+
 
 ])
 
