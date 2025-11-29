@@ -7,9 +7,10 @@ from pyspark.sql.types import *
 import math
 
 #Importando para a previsão do dia da semana e horario de pico
-from pyspark.sql.functions import col, udf, date_format, hour, to_timestamp
-from pyspark.sql.types import *
-from pyspark.sql.functions import avg 
+from pyspark.sql.functions import (
+    col, udf, date_format, hour, try_to_timestamp,
+    avg, concat_ws, lit
+)
 #
 
 from pyspark.ml import Pipeline
@@ -85,8 +86,13 @@ df = (spark.read.csv(DATA_PATH, header=True, schema=schema)
 # O formato dos seus dados Order_Date e Order_Time deve ser compatível
 df = df.withColumn(
     "Order_Timestamp",
-    to_timestamp(col("Order_Date") + " " + col("Order_Time"), "yyyy-MM-dd HH:mm:ss") # Ajuste o formato se necessário
+    try_to_timestamp(
+        concat_ws(" ", col("Order_Date"), col("Order_Time")), 
+        lit("yyyy-MM-dd HH:mm:ss") # <-- Alterado: lit() garante que seja uma string literal
+    )
 )
+
+df = df.filter(col("Order_Timestamp").isNotNull()) 
 
 # 2. Extrai o Dia da Semana (Ex: Mon, Tue, Wed...)
 df = df.withColumn(
