@@ -11,7 +11,7 @@ from pyspark.sql.functions import (
     col, udf, date_format, hour, try_to_timestamp,
     avg, concat_ws, lit
 )
-#
+###########3
 
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
@@ -59,6 +59,7 @@ schema = StructType([
     StructField("Store_Longitude", DoubleType(), True),
     StructField("Drop_Latitude", DoubleType(), True),
     StructField("Drop_Longitude", DoubleType(), True),
+    
     StructField("Order_Date", StringType(), True),
     StructField("Order_Time", StringType(), True),
     StructField("Pickup_Time", StringType(), True),
@@ -69,13 +70,10 @@ schema = StructType([
     StructField("Delivery_Time", IntegerType(), True), # Nosso ALVO (Label)
     StructField("Category", StringType(), True),
 
-
-
-
 ])
 
-DATA_PATH = '/home/rubem/Documentos/Rubem/Aplicacao_de_predicao/data/amazon_delivery.csv' 
-MODEL_SAVE_PATH = './model/spark_delivery_pipeline'
+DATA_PATH = 'data/amazon_delivery.csv'
+MODEL_SAVE_PATH = 'model/spark_delivery_pipeline'
 
 # Carrega o dataset
 df = (spark.read.csv(DATA_PATH, header=True, schema=schema)
@@ -84,6 +82,7 @@ df = (spark.read.csv(DATA_PATH, header=True, schema=schema)
 # --- NOVO: ENGENHARIA DE FEATURES DE TEMPO ---
 # 1. Combina Data e Hora em um Timestamp
 # O formato dos seus dados Order_Date e Order_Time deve ser compatível
+
 df = df.withColumn(
     "Order_Timestamp",
     try_to_timestamp(
@@ -91,8 +90,9 @@ df = df.withColumn(
         lit("yyyy-MM-dd HH:mm:ss") # <-- Alterado: lit() garante que seja uma string literal
     )
 )
+############
 
-df = df.filter(col("Order_Timestamp").isNotNull()) 
+df = df.filter(col("Order_Timestamp").isNotNull()) ##########
 
 # 2. Extrai o Dia da Semana (Ex: Mon, Tue, Wed...)
 df = df.withColumn(
