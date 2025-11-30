@@ -9,7 +9,7 @@ import os
 # --- Configurações ---
 KAFKA_BROKER = 'localhost:9092'  # Endereço do Kafka DENTRO do Docker Compose
 KAFKA_TOPIC = 'delivery_stream'
-DATASET_PATH = '/home/rubem/Documentos/Rubem/Aplicacao_de_predicao/data/amazon_delivery.csv' 
+DATASET_PATH = 'data/amazon_delivery.csv' # Caminho Genérico
 # Aguarda o Kafka estar pronto (simples, mas eficaz)
 print("Produtor iniciando... aguardando Kafka.")
 time.sleep(30) # Tempo para o Kafka e Zookeeper iniciarem no docker-compose
